@@ -111,17 +111,17 @@ n
 w
 y
 EOF
-
-    # Format the partitions
-    print_color "33" "Formatting partitions..."
-    mkfs.fat -F32 /dev/nvme0n1p1
-    mkfs.btrfs -f /dev/nvme0n1p2
-    mkswap /dev/nvme0n1p3
 else
     print_color "33" "Skipping partition creation. Using existing partitions."
     # You may want to add a prompt here to confirm the existing partition layout
     read -p "Press Enter to continue with the existing partition layout..."
 fi
+
+# Format the partitions
+print_color "33" "Formatting partitions..."
+mkfs.fat -F32 /dev/nvme0n1p1
+mkfs.btrfs -f /dev/nvme0n1p2
+mkswap /dev/nvme0n1p3
 
 # Mount the partitions and create subvolumes
 print_color "33" "Creating and mounting BTRFS subvolumes..."
