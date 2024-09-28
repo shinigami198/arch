@@ -170,14 +170,10 @@ KERNEL_HEADERS="${KERNEL}-headers"
 echo "Selected kernel: $KERNEL"
 
 print_color "33" "Installing base system..."
-if ! pacstrap -K /mnt base base-devel $KERNEL $KERNEL_HEADERS linux-firmware sof-firmware networkmanager grub efibootmgr os-prober micro git wget; then
+if ! pacstrap -K -P /mnt base base-devel $KERNEL $KERNEL_HEADERS linux-firmware sof-firmware networkmanager grub efibootmgr os-prober micro git wget bluez; then
     print_color "31" "Failed to install base system."
     exit 1
 fi
-
-# Copy pacman configuration to the new system
-print_color "33" "Copying pacman configuration to the new system..."
-cp /etc/pacman.conf /mnt/etc/pacman.conf
 
 print_color "33" "Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
