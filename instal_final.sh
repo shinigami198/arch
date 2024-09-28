@@ -102,7 +102,7 @@ n
 n
 3
 
-
++${swap_size}
 8200
 w
 y
@@ -321,7 +321,7 @@ if [[ $install_sddm =~ ^[Yy]$ ]]; then
 
         # Install Flatpak and KDE Control Modules
         print_color "32" "Installing Flatpak and additional KDE Control Modules..."
-        if ! arch-chroot /mnt pacman -S --noconfirm flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluez bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon; then
+        if ! arch-chroot /mnt pacman -S --noconfirm flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon; then
             print_color "31" "Failed to install Flatpak and KDE Control Modules."
             exit 1
         fi
@@ -338,7 +338,7 @@ print_color "32" "Enabling NetworkManager service..."
 arch-chroot /mnt systemctl enable NetworkManager
 
 print_color "32" "Enabling Bluetooth service..."
-if ! arch-chroot /mnt pacman -S --noconfirm bluez bluez-utils; then
+if ! arch-chroot /mnt pacman -S --noconfirm bluez; then
     print_color "31" "Failed to install Bluetooth packages."
     exit 1
 fi
