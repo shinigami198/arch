@@ -270,7 +270,7 @@ if ! grep -q "btrfs" "$MKINITCPIO_CONF"; then
     print_color "33" "Adding btrfs module to mkinitcpio.conf"
     arch-chroot /mnt sed -i 's/^MODULES=(/MODULES=(btrfs /' "$MKINITCPIO_CONF"
 fi
-arch-chroot /mnt sed -i 's/fsck//' "$MKINITCPIO_CONF"
+arch-chroot /mnt sed -i 's/ fsck//' "$MKINITCPIO_CONF"
 
 # NVIDIA GPU setup
 read -p "Do you have an NVIDIA GPU? (y/n): " has_nvidia
@@ -286,7 +286,7 @@ if [[ $has_nvidia =~ ^[Yy]$ ]]; then
     print_color "33" "Adding NVIDIA modules to mkinitcpio.conf"
     arch-chroot /mnt sed -i '/^MODULES=/ s/)/'"${NVIDIA_MODULES[*]}"' &/' "$MKINITCPIO_CONF"
 
-    arch-chroot /mnt sed -i 's/kms//' "$MKINITCPIO_CONF"
+    arch-chroot /mnt sed -i 's/ kms//' "$MKINITCPIO_CONF"
 
     print_color "33" "Regenerating initramfs after adding NVIDIA modules"
     arch-chroot /mnt mkinitcpio -P
@@ -328,7 +328,7 @@ if [[ $install_sddm =~ ^[Yy]$ ]]; then
 
         # Install Flatpak and KDE Control Modules
         print_color "32" "Installing Flatpak and additional KDE Control Modules..."
-        if ! arch-chroot /mnt pacman -S --noconfirm alacritty fastfetch thunar thunar-archive-plugin flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon; then
+        if ! arch-chroot /mnt pacman -S --noconfirm alacritty fastfetch dolphin bluez flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon; then
             print_color "31" "Failed to install Flatpak and KDE Control Modules."
             exit 1
         fi
