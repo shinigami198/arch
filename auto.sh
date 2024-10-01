@@ -133,7 +133,7 @@ configure_pacman() {
         exit 1
     fi
 }
-
+sync
 # Call the function to configure pacman
 configure_pacman
 
@@ -142,7 +142,7 @@ pacman -S --noconfirm rsync
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 
 print_color "33" "Updating mirror list..."
-reflector -a 6 -c Singapore -a 6 -l 20 --sort rate --save /etc/pacman.d/mirrorlist
+reflector -a 6 -c Singapore --sort rate --save /etc/pacman.d/mirrorlist
 
 print_color "33" "Installing necessary packages..."
 if ! pacman -S --noconfirm --needed gptfdisk btrfs-progs glibc; then
