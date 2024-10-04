@@ -33,7 +33,7 @@ exec 2>&1
 
 print_color "36" "Starting Arch Linux installation..."
 
-# Gather user inputs at the beginning
+# Gather all user inputs at the beginning
 read -p "Enter the hostname for this machine: " HOSTNAME
 
 read -p "Do you want to create new partitions? (y/n): " create_partitions
@@ -48,8 +48,10 @@ read -p "Do you have an NVIDIA GPU? (y/n): " has_nvidia
 read -p "Do you want to install SDDM (Simple Desktop Display Manager)? (y/n): " install_sddm
 if [[ $install_sddm =~ ^[Yy]$ ]]; then
     read -p "Do you want to install Plasma (KDE Desktop Environment)? (y/n): " install_plasma
+    read -p "Do you want to install Xorg? (y/n): " install_xorg
 fi
 
+# Choose kernel
 choose_kernel() {
     while true; do
         echo "Please select a Linux kernel to install:"
@@ -66,14 +68,10 @@ choose_kernel() {
         esac
     done
 }
-
-# Call the function to choose a kernel
 choose_kernel
-
 KERNEL_HEADERS="${KERNEL}-headers"
 
 # Set password for root user
-# Ask for root password
 while true; do
     read -s -p "Enter password for root user: " ROOT_PASSWORD
     echo
@@ -87,7 +85,6 @@ while true; do
 done
 
 # Create a new user
-# Ask for username and passwords at the beginning
 echo "Setting up new user..."
 while true; do
     read -p "Enter the username for the new user: " NEW_USER
@@ -111,6 +108,13 @@ while true; do
     fi
 done
 
+# AUR helper choice
+echo "Do you want to install an AUR helper?"
+echo "1) yay"
+echo "2) paru"
+echo "3) No, skip AUR helper installation"
+read -p "Enter your choice [1-3]: " aur_choice
+
 # Proceed with the rest of the script using the gathered inputs
 loadkeys us
 timedatectl set-ntp true
@@ -133,9 +137,8 @@ configure_pacman() {
         exit 1
     fi
 }
-sync
-# Call the function to configure pacman
 configure_pacman
+sync
 
 pacman -S --noconfirm rsync
 
@@ -145,10 +148,7 @@ print_color "33" "Updating mirror list..."
 reflector -a 6 -c Singapore --sort rate --save /etc/pacman.d/mirrorlist
 
 print_color "33" "Installing necessary packages..."
-if ! pacman -S --noconfirm --needed gptfdisk btrfs-progs glibc; then
-    print_color "31" "Failed to install necessary packages."
-    exit 1
-fi
+pacman -S --noconfirm --needed gptfdisk btrfs-progs glibc
 
 umount -R /mnt 2>/dev/null || true
 
@@ -218,10 +218,7 @@ swapon /dev/nvme0n1p3
 mount --mkdir /dev/nvme0n1p1 /mnt/boot/efi
 
 print_color "33" "Installing base system..."
-if ! pacstrap -K -P /mnt base base-devel $KERNEL $KERNEL_HEADERS linux-firmware sof-firmware networkmanager grub efibootmgr os-prober micro git wget bluez pulseaudio alsa-utils pulseaudio-bluetooth; then
-    print_color "31" "Failed to install base system."
-    exit 1
-fi
+pacstrap -K -P /mnt base base-devel $KERNEL $KERNEL_HEADERS linux-firmware sof-firmware networkmanager grub efibootmgr os-prober micro git wget bluez pipewire
 
 print_color "33" "Generating fstab..."
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -268,23 +265,11 @@ install_grub() {
     arch-chroot /mnt pacman -S --noconfirm efibootmgr
     arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id="$LABEL"
 
-    if [ $? -eq 0 ]; then
-        print_color "32" "GRUB installed successfully."
-        arch-chroot /mnt pacman -S --noconfirm --needed os-prober
-        echo "Enabling os-prober in GRUB configuration..."
-        arch-chroot /mnt sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
-        echo "Generating GRUB configuration..."
-        arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
-        if [ $? -eq 0 ]; then
-            print_color "32" "GRUB configuration generated successfully."
-        else
-            print_color "31" "Failed to generate GRUB configuration."
-            exit 1
-        fi
-    else
-        print_color "31" "Failed to install GRUB."
-        exit 1
-    fi
+    arch-chroot /mnt pacman -S --noconfirm --needed os-prober
+    echo "Enabling os-prober in GRUB configuration..."
+    arch-chroot /mnt sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
+    echo "Generating GRUB configuration..."
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 # Call the function to install GRUB
@@ -308,15 +293,12 @@ arch-chroot /mnt sed -i 's/ fsck//' "$MKINITCPIO_CONF"
 
 if [[ $has_nvidia =~ ^[Yy]$ ]]; then
     print_color "32" "Installing NVIDIA drivers and configuring the system..."
-    if ! arch-chroot /mnt pacman -S --noconfirm --needed nvidia-dkms libglvnd opencl-nvidia nvidia-utils lib32-libglvnd lib32-opencl-nvidia lib32-nvidia-utils nvidia-settings; then
-        print_color "31" "Failed to install NVIDIA drivers."
-        exit 1
-    fi
+    arch-chroot /mnt pacman -S --noconfirm --needed nvidia-dkms libglvnd opencl-nvidia nvidia-utils lib32-libglvnd lib32-opencl-nvidia lib32-nvidia-utils nvidia-settings
     NVIDIA_MODULES=("nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm")
 
     # Modify mkinitcpio.conf to add NVIDIA modules after existing modules
     print_color "33" "Adding NVIDIA modules to mkinitcpio.conf"
-    arch-chroot /mnt sed -i '/^MODULES=/ s/)/'"${NVIDIA_MODULES[*]}"' &/' "$MKINITCPIO_CONF"
+    arch-chroot /mnt sed -i '/^MODULES=/ s/)/'"${NVIDIA_MODULES[*]}"'&/' "$MKINITCPIO_CONF"
 
     arch-chroot /mnt sed -i 's/ kms//' "$MKINITCPIO_CONF"
 
@@ -334,32 +316,34 @@ if [[ $has_nvidia =~ ^[Yy]$ ]]; then
         print_color "33" "Adding parameters to GRUB_CMDLINE_LINUX_DEFAULT"
         arch-chroot /mnt sed -i "s/\(^GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $GRUB_PARAMS\"/" "$GRUB_CONF"
     fi
+
+    # Create or modify /etc/modprobe.d/nvidia.conf
+    print_color "33" "Adding NVIDIA options to /etc/modprobe.d/nvidia.conf"
+    echo "options nvidia_drm modeset=1 fbdev=1" | arch-chroot /mnt tee /etc/modprobe.d/nvidia.conf > /dev/null
 else
     print_color "33" "Skipping NVIDIA setup."
 fi
 
 if [[ $install_sddm =~ ^[Yy]$ ]]; then
     print_color "32" "Installing SDDM..."
-    if ! arch-chroot /mnt pacman -S --noconfirm sddm; then
-        print_color "31" "Failed to install SDDM."
-        exit 1
-    fi
+    arch-chroot /mnt pacman -S --noconfirm sddm
     print_color "32" "Enabling SDDM service..."
     arch-chroot /mnt systemctl enable sddm
 
+    if [[ $install_xorg =~ ^[Yy]$ ]]; then
+        print_color "32" "Installing minimal Xorg for KDE..."
+        arch-chroot /mnt pacman -S --noconfirm xorg-server xorg-xinit xorg-xrandr xorg-xsetroot
+    else
+        print_color "33" "Skipping Xorg installation."
+    fi
+
     if [[ $install_plasma =~ ^[Yy]$ ]]; then
         print_color "32" "Installing Plasma..."
-        if ! arch-chroot /mnt pacman -S --noconfirm plasma-desktop sddm-kcm plymouth-kcm kcm-fcitx flatpak-kcm; then
-            print_color "31" "Failed to install Plasma."
-            exit 1
-        fi
+        arch-chroot /mnt pacman -S --noconfirm plasma-desktop sddm-kcm plymouth-kcm kcm-fcitx flatpak-kcm
 
         # Install Flatpak and KDE Control Modules
         print_color "32" "Installing Flatpak and additional KDE Control Modules..."
-        if ! arch-chroot /mnt pacman -S --noconfirm alacritty fastfetch dolphin bluez flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon; then
-            print_color "31" "Failed to install Flatpak and KDE Control Modules."
-            exit 1
-        fi
+        arch-chroot /mnt pacman -S --noconfirm fastfetch bluez flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon
         arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     else
         print_color "33" "Skipping Plasma installation."
@@ -374,18 +358,64 @@ arch-chroot /mnt /bin/bash -c "systemctl enable NetworkManager"
 arch-chroot /mnt /bin/bash -c "systemctl enable bluetooth"
 arch-chroot /mnt /bin/bash -c "systemctl enable fstrim.timer"
 
-print_color "32" "Modifying GRUB configuration to enable Plymouth..."
-if ! arch-chroot /mnt pacman -S --noconfirm plymouth; then
-    print_color "31" "Failed to install Plymouth."
-    exit 1
-fi
 arch-chroot /mnt sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& quiet splash/' /etc/default/grub
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+
+# Install and configure Zsh
+print_color "32" "Installing and configuring Zsh..."
+arch-chroot /mnt pacman -S --noconfirm zsh fzf zsh-autosuggestions zsh-syntax-highlighting
+
+# Set Zsh as the default shell for the new user
+arch-chroot /mnt chsh -s /usr/bin/zsh $NEW_USER
+
+# Configure Zsh for the new user
+arch-chroot /mnt su - $NEW_USER << EOF
+echo 'source /usr/share/fzf/key-bindings.zsh' >> ~/.zshrc
+echo 'source /usr/share/fzf/completion.zsh' >> ~/.zshrc
+echo 'source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh' >> ~/.zshrc
+echo 'source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc
+EOF
+
+print_color "32" "Zsh configured as the default shell with fzf and autocompletion."
+
+# Function to install AUR helper
+install_aur_helper() {
+    local helper=$1
+    local repo_url=$2
+    
+    print_color "32" "Installing $helper..."
+    arch-chroot /mnt bash -c "
+        cd /tmp
+        sudo -u $NEW_USER git clone $repo_url
+        cd $helper
+        sudo -u $NEW_USER makepkg -si --noconfirm
+        cd ..
+        rm -rf $helper
+    "
+    if [ $? -eq 0 ]; then
+        print_color "32" "$helper installed successfully."
+    else
+        print_color "31" "Failed to install $helper."
+    fi
+}
+
+case $aur_choice in
+    1)
+        install_aur_helper "yay" "https://aur.archlinux.org/yay.git"
+        ;;
+    2)
+        install_aur_helper "paru" "https://aur.archlinux.org/paru.git"
+        ;;
+    3)
+        print_color "33" "Skipping AUR helper installation."
+        ;;
+    *)
+        print_color "31" "Invalid choice. Skipping AUR helper installation."
+        ;;
+esac
 
 # Ensure all changes are written to disk
 sync
 
 print_color "32" "Installation complete. Unmounting and rebooting..."
 umount -R /mnt
-
-reboot
