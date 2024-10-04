@@ -410,4 +410,3 @@ esac
 sync
 
 print_color "32" "Installation complete. Unmounting and rebooting..."
-umount -R /mnt
