@@ -3,7 +3,6 @@ set -e
 
 # Configuration
 COUNTRY="Singapore"
-LOG_FILE="/var/log/arch_install.log"
 EFI_PARTITION="/dev/nvme0n1p1"
 BOOT_DISK="/dev/nvme0n1"
 LABEL="Legion -- X"
@@ -23,13 +22,6 @@ error_handler() {
     print_color "31" "Error occurred on line $1"
     exit 1
 }
-
-# Set up error handling
-trap 'error_handler $LINENO' ERR
-
-# Set up logging
-exec > >(tee -i $LOG_FILE)
-exec 2>&1
 
 print_color "36" "Starting Arch Linux installation..."
 
