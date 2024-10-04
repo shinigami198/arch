@@ -335,7 +335,7 @@ if [[ $install_sddm =~ ^[Yy]$ ]]; then
 
         # Install Flatpak and KDE Control Modules
         print_color "32" "Installing Flatpak and additional KDE Control Modules..."
-        arch-chroot /mnt pacman -S --noconfirm fastfetch bluez flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon
+        arch-chroot /mnt pacman -S --noconfirm fastfetch bluez firewalld flatpak kde-gtk-config breeze-gtk kdeconnect kdeplasma-addons bluedevil kgamma kscreen plasma-firewall plasma-browser-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor power-profiles-daemon
         arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     else
         print_color "33" "Skipping Plasma installation."
