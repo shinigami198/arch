@@ -394,21 +394,6 @@ arch-chroot /mnt /bin/bash -c "systemctl enable fstrim.timer"
 arch-chroot /mnt sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& quiet splash/' /etc/default/grub
 arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
-# Install and configure Zsh
-print_color "32" "Installing and configuring Zsh..."
-arch-chroot /mnt pacman -S --noconfirm zsh fzf zsh-autosuggestions zsh-syntax-highlighting
-
-# Set Zsh as the default shell for the new user
-arch-chroot /mnt chsh -s /usr/bin/zsh $NEW_USER
-
-# Configure Zsh for the new user
-arch-chroot /mnt su - $NEW_USER << EOF
-echo 'source /usr/share/fzf/key-bindings.zsh' >> ~/.zshrc
-echo 'source /usr/share/fzf/completion.zsh' >> ~/.zshrc
-echo 'source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh' >> ~/.zshrc
-echo 'source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc
-EOF
-
 print_color "32" "Zsh configured as the default shell with fzf and autocompletion."
 
 # Function to install AUR helper
